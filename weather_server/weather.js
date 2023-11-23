@@ -1,9 +1,9 @@
 const axios = require('axios');
 const {redisSet, redisGet} = require('./redis');
-const { json } = require('express');
-
+const {WEATHER_URL, WEATHER_AUTH, REDIS_PAIR_TTL} = require('./config');
 
 const getWeather = async (city) => { 
+    if (!WEATHER_URL || !WEATHER_AUTH) return {message: "OUT OF SERVICE"}
     try {
       const cache = await redisGet(city);
       if (cache) {
@@ -13,9 +13,9 @@ const getWeather = async (city) => {
       console.log("CACHE MISS")
       const response = await axios.request({
         method: "GET",
-        url: 'https://api.api-ninjas.com/v1/weather?city=' + city,
+        url: WEATHER_URL + city,
         headers: {
-            "X-API-KEY": "YbdgZf59lSo6VSJ6BaklYQ==xghcOBjyCR8UbPPf"
+            "X-API-KEY": WEATHER_AUTH
         }
       });
       const weather_data = {
@@ -23,7 +23,7 @@ const getWeather = async (city) => {
         max: response.data.max_temp
       };
 
-      await redisSet(city, JSON.stringify(weather_data), "EX", 300);
+      await redisSet(city, JSON.stringify(weather_data), "EX", REDIS_PAIR_TTL);
       return weather_data;
     } catch (error) {
         console.error(error)
