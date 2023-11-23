@@ -23,7 +23,7 @@ const getWeather = async (city) => {
         max: response.data.max_temp
       };
 
-      await redisSet(city, JSON.stringify(weather_data), "EX", REDIS_PAIR_TTL);
+      await redisSet(city, JSON.stringify(weather_data));
       return weather_data;
     } catch (error) {
         console.error(error)

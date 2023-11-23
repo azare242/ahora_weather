@@ -1,4 +1,4 @@
-const {REDIS_HOST, REDIS_PORT} = require("./config")
+const {REDIS_HOST, REDIS_PORT, REDIS_PAIR_TTL} = require("./config")
 const {createClient} = require("redis");
 
 
@@ -9,7 +9,7 @@ const redisSet = async (key, value) => {
     .on("error", (error)=>console.log(error))
     .connect();
     
-    await redis_client.set(key, value);
+    await redis_client.set(key, value,{EX: REDIS_PAIR_TTL});
 } 
 
 
