@@ -1,4 +1,4 @@
-const {PORT} = require('./config')
+const config = require('./config')
 const express = require('express');
 const { getWeather } = require('./weather')
 const morgan = require('morgan')
@@ -19,8 +19,8 @@ app.get('/api/v1/weather/:city', async (req, res) => {
 
 
 
+console.log(config);
 
-
-app.listen(PORT, () => {
-    console.log(`Server running on ${PORT}`)
+app.listen(config.PORT, () => {
+    console.log(`Server running on ${config.PORT}`)
 });

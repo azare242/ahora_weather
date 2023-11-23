@@ -9,7 +9,7 @@ const redisSet = async (key, value) => {
             port: REDIS_PORT
         }
     )
-    .on("error", ()=>console.log("REDIS ERROR"))
+    .on("error", (error)=>console.log(error))
     .connect();
     
     await redis_client.set(key, value);
@@ -18,7 +18,7 @@ const redisSet = async (key, value) => {
 
 const redisGet = async (key) => {
     const redis_client = await createClient()
-    .on("error", ()=>console.log("REDIS ERROR"))
+    .on("error", (error)=>console.log(error))
     .connect();
 
     const result = await redis_client.get(key);
