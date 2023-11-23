@@ -16,7 +16,7 @@ services:
       - WEATHER_AUTH=YbdgZf59lSo6VSJ6BaklYQ==xghcOBjyCR8UbPPf
       - REDIS_PAIR_TTL=300
   redis:
-    image: "7.2-alpine"
+    image: "redis:7.2-alpine"
     volumes:
       - redis-data:/data
 volumes:

@@ -3,12 +3,9 @@ const {createClient} = require("redis");
 
 
 const redisSet = async (key, value) => {
-    const redis_client = await createClient(
-        {
-            host: REDIS_HOST,
-            port: REDIS_PORT
-        }
-    )
+    const redis_client = await createClient({
+        url: `redis://${REDIS_HOST}:${REDIS_PORT}`
+    })
     .on("error", (error)=>console.log(error))
     .connect();
     
