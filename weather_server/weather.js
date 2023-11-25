@@ -3,6 +3,7 @@ const {redisSet, redisGet} = require('./redis');
 const {WEATHER_URL, WEATHER_AUTH, REDIS_PAIR_TTL} = require('./config');
 
 const getWeather = async (city) => { 
+//    console.log("redis://" + REDIS_HOST + ":" + REDIS_PORT)
     if (!WEATHER_URL || !WEATHER_AUTH) return {message: "OUT OF SERVICE"}
     try {
       const cache = await redisGet(city);

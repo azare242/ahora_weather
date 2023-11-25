@@ -13,7 +13,8 @@ app.get('/ping', (_, res) => {
 
 
 app.get('/api/v1/weather/:city', async (req, res) => {
-    const weather = await getWeather(req.params.city);
+    const city = `${req.params.city}`.toLowerCase();
+    const weather = await getWeather(city);
     res.status(weather.message !== undefined ? 400 : 200).send({weather});
 })
 
