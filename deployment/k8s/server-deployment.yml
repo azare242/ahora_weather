@@ -28,7 +28,7 @@ spec:
             value: "https://api.api-ninjas.com/v1/weather?city="
           - name: WEATHER_AUTH
             value: "YbdgZf59lSo6VSJ6BaklYQ==xghcOBjyCR8UbPPf"
-          - name: REDIS_PAIT_TTL
+          - name: REDIS_PAIR_TTL
             value: "300"
         ports:
         - containerPort: 80
