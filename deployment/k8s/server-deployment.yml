@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-server-deployment
+  labels:
+    app: weather-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: weather-server
+  template:
+    metadata:
+      labels:
+        app: weather-server
+    spec:
+      containers:
+      - name: wather-server
+        image: azare242/weather-server:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - mountPath: /configs
+            name: config-volume
+      volumes:
+        - name: config-volume
+          configMap:
+            name: my-configmap
