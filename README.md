@@ -4,7 +4,7 @@
 
  - Implemented with ExpressJs
  - You can access docker image of project with `azare242/weather-server:latest`
-
+ - for weather i use [ninjas](https://api-ninjas.com/)  api
 
 **if you want use docker-compose**, just fill environment section in `deployment/docker-compose.yml`:
 ```yaml
@@ -17,7 +17,7 @@
       - REDIS_PAIR_TTL=
 ```
 
-> for weather i use [ninjas](https://api-ninjas.com/)  api
+
 
 **if you want use k8s,** fill data section in config map in `deployment/k8s/server-configmap.yml`:
 ```yaml
