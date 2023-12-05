@@ -45,3 +45,7 @@ and  fill env section in deployment in `deployment/k8s/server-deployment.yml`
           - name: REDIS_PAIR_TTL
             value:
 ```
+then you can deploy it with kubectl with:
+
+    cd deployment/k8s
+    kubectl apply -f .
