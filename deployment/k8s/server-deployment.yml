@@ -19,17 +19,17 @@ spec:
         image: azare242/weather-server:latest
         env:
           - name: PORT
-            value: "80"
+            value:
           - name: REDIS_HOST
-            value: redis
+            value: 
           - name: REDIS_PORT
-            value: "6379"
+            value: 
           - name: WEATHER_URL
-            value: "https://api.api-ninjas.com/v1/weather?city="
+            value: 
           - name: WEATHER_AUTH
-            value: "YbdgZf59lSo6VSJ6BaklYQ==xghcOBjyCR8UbPPf"
+            value: 
           - name: REDIS_PAIR_TTL
-            value: "300"
+            value: 
         ports:
         - containerPort: 80
         volumeMounts:
