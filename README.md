@@ -49,3 +49,10 @@ then you can deploy it with kubectl with:
 
     cd deployment/k8s
     kubectl apply -f .
+
+
+
+> for this project we focus on deployment with docker and k8s,
+> if you want test this project without them,
+>  do not forget look at `weather_server/config.js` and use `dotenv` package
+
