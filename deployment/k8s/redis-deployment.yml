@@ -4,6 +4,10 @@ metadata:
   name: redis
 spec:
   replicas: 1
+  # Stop the old Redis before starting another writer on the same PVC.
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       name: redis
@@ -12,15 +16,54 @@ spec:
       labels:
         name: redis
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7.2-alpine
+          command: [redis-server, --appendonly, "yes"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            exec:
+              command: [redis-cli, ping]
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: [redis-cli, ping]
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            exec:
+              command: [redis-cli, ping]
+            periodSeconds: 10
+            timeoutSeconds: 2
+          volumeMounts:
+            - mountPath: /data
+              name: redis-data-store
       volumes:
         - name: redis-data-store
           persistentVolumeClaim:
             claimName: redis-pv-claim
-      containers:
-        - name: redis
-          image: redis:7.2-alpine
-          ports:
-            - containerPort: 6379
-          volumeMounts:
-            - mountPath: "/data"
-              name: redis-data-store

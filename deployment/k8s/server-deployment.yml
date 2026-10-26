@@ -6,6 +6,13 @@ metadata:
     app: weather-server
 spec:
   replicas: 3
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 180
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: weather-server
@@ -14,28 +21,65 @@ spec:
       labels:
         app: weather-server
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
-      - name: wather-server
-        image: azare242/weather-server:latest
-        env:
-          - name: PORT
-            value:
-          - name: REDIS_HOST
-            value: 
-          - name: REDIS_PORT
-            value: 
-          - name: WEATHER_URL
-            value: 
-          - name: WEATHER_AUTH
-            value: 
-          - name: REDIS_PAIR_TTL
-            value: 
-        ports:
-        - containerPort: 80
-        volumeMounts:
-          - mountPath: /configs
-            name: config-volume
+        - name: weather-server
+          # Build/load this image locally, or replace with a published immutable tag/digest.
+          image: ahora-weather:local
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: my-configmap
+          env:
+            - name: WEATHER_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: weather-server-secret
+                  key: WEATHER_AUTH
+          ports:
+            - name: http
+              containerPort: 9999
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
       volumes:
-        - name: config-volume
-          configMap:
-            name: my-configmap
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi

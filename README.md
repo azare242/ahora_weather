@@ -62,38 +62,62 @@ withproxy docker run --rm --init -p 127.0.0.1:9999:9999 --env-file deployment/.e
   -e REDIS_HOST=your-redis-host -e REDIS_PORT=6379 ahora-weather:local
 ```
 
-**if you want use k8s,** fill data section in config map in `deployment/k8s/server-configmap.yml`:
-```yaml
-data:
-   PORT:
-   REDIS_HOST:
-   REDIS_PORT:
-   WEATHER_URL:
-   WEATHER_AUTH:
-   REDIS_PAIR_TTL:
+### Kubernetes baseline
+
+Build the current app as `ahora-weather:local` using the Docker command above.
+For kind, load it with `kind load docker-image ahora-weather:local`; for minikube,
+use `minikube image load ahora-weather:local`. For a remote cluster, push the
+image with a unique version tag or digest and update `server-deployment.yml`.
+The local tag uses `IfNotPresent`; rebuilds under the same tag require reloading
+and restarting Pods. Use unique tags for repeatable rollouts.
+
+Use a dedicated namespace and create the API key Secret without committing it:
+
+```sh
+kubectl create namespace weather
+read -rs WEATHER_AUTH
+printf '%s' "$WEATHER_AUTH" | kubectl -n weather create secret generic weather-server-secret \
+  --from-file=WEATHER_AUTH=/dev/stdin --dry-run=client -o yaml | kubectl apply -f -
+unset WEATHER_AUTH
+kubectl kustomize deployment/k8s
+kubectl -n weather apply --dry-run=server -k deployment/k8s
+kubectl -n weather apply -k deployment/k8s
+kubectl -n weather rollout status deployment/redis
+kubectl -n weather rollout status deployment/weather-server-deployment
+kubectl -n weather port-forward service/weather-server-service 9999:80
 ```
-and  fill env section in deployment in `deployment/k8s/server-deployment.yml`
-```yaml
-        env:
-          - name: PORT
-            value: 
-          - name: REDIS_HOST
-            value: 
-          - name: REDIS_PORT
-            value: 
-          - name: WEATHER_URL
-            value:
-          - name: WEATHER_AUTH
-            value: 
-          - name: REDIS_PAIR_TTL
-            value:
+
+Enter the key after `read` and press Enter. Then, in another terminal:
+
+```sh
+curl http://localhost:9999/ping
+curl http://localhost:9999/api/v1/weather/tehran
 ```
-then you can deploy it with kubectl with:
 
-    cd deployment/k8s
-    kubectl apply -f .
+Non-secret settings live in `deployment/k8s/server-configmap.yml` and are
+injected as environment variables. After changing the ConfigMap or Secret,
+restart the app with `kubectl -n weather rollout restart deployment/weather-server-deployment`.
+The Service routes port 80 to the app's named port on 9999.
+Startup, readiness, and liveness probes currently use `/ping`, which checks
+only the HTTP process; weather requests can still fail when Redis or the
+provider is unavailable. Dedicated health semantics and graceful shutdown
+remain application improvements in `improve.md`.
 
+Both workloads have resource budgets, non-root users, read-only root filesystems,
+dropped capabilities, and no mounted Kubernetes API token. Size resources using
+measurements. App rollouts allow one extra Pod and keep existing replicas until
+new ones pass readiness; reserve capacity for four app Pods during updates.
 
+Redis uses append-only persistence and a single replica with `Recreate` updates,
+so Redis updates have downtime. The PVC requires a default StorageClass (check
+`kubectl get storageclass`), or an explicitly configured class. The former
+hostPath PV is retained only as `deployment/k8s/examples/redis-pv.yml.example`;
+it is excluded from Kustomize. Use `apply -k`, rather than recursively applying
+this directory. Existing bound PVCs keep their storage; changing storage class
+requires a separately planned data migration. Do not delete a bound PVC to
+apply this change. Storage durability and cross-node availability depend on
+the provisioner; this single Redis instance does not provide high availability.
+Redis is unauthenticated and intended for an isolated training namespace.
 
 > for this project we focus on deployment with docker and k8s,
 > if you want test this project without them,

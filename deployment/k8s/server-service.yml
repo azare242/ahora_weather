@@ -3,9 +3,11 @@ kind: Service
 metadata:
   name: weather-server-service
 spec:
+  type: ClusterIP
   selector:
     app: weather-server
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: http

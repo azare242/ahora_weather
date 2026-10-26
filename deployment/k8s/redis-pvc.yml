@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: redis-pv-claim
 spec:
-  storageClassName: manual
+  # Uses the cluster's default StorageClass; set storageClassName if needed.
   accessModes:
     - ReadWriteOnce
   resources:

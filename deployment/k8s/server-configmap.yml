@@ -3,9 +3,9 @@ kind: ConfigMap
 metadata:
   name: my-configmap
 data:
-   PORT:
-   REDIS_HOST:
-   REDIS_PORT:
-   WEATHER_URL:
-   WEATHER_AUTH:
-   REDIS_PAIR_TTL:
+  NODE_ENV: production
+  PORT: "9999"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PAIR_TTL: "20"
+  WEATHER_URL: "https://api.api-ninjas.com/v1/weather?city="
