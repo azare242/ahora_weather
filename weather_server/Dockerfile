@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-COPY --chown=node:node config.js index.js redis.js weather.js ./
+COPY --chown=node:node config.js index.js redis.js weather.js cities.js ./
 USER node
 
 EXPOSE 9999
