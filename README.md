@@ -123,3 +123,19 @@ Redis is unauthenticated and intended for an isolated training namespace.
 > if you want test this project without them,
 >  do not forget look at `weather_server/config.js` and use `dotenv` package
 
+
+### Supported city inputs
+
+Weather requests resolve city names locally and call API Ninjas with `lat` and
+`lon`, which work on the free plan. Set `WEATHER_AUTH` to your API key and
+`WEATHER_URL` to `https://api.api-ninjas.com/v1/weather` (the default).
+
+Supported cities: Tehran, Mashhad, Isfahan (Esfahan), Shiraz, Tabriz, Karaj,
+Qom, Ahvaz, Kermanshah, Urmia, Rasht, Zahedan, Hamadan, Kerman, Yazd,
+Ardabil, Bandar Abbas, Arak, Qazvin, and Zanjan. Persian names are also accepted.
+Input is case-insensitive; spaces, hyphens, underscores, Persian half-spaces,
+and Arabic variants of ی/ک are normalized. Aliases share a canonical cache key.
+Unknown cities return HTTP 400 with the supported city names.
+
+Examples: `/api/v1/weather/TEHRAN`, `/api/v1/weather/esfahan`,
+`/api/v1/weather/bandar-abbas` (URL-encode Persian names or spaces).

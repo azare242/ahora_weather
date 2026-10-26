@@ -1,9 +1,13 @@
 const axios = require('axios');
 const {redisSet, redisGet} = require('./redis');
-const {WEATHER_URL, WEATHER_AUTH, REDIS_PAIR_TTL} = require('./config');
+const {WEATHER_URL, WEATHER_AUTH} = require('./config');
 
-const getWeather = async (city) => { 
-//    console.log("redis://" + REDIS_HOST + ":" + REDIS_PORT)
+const {resolveCity, cities} = require('./cities');
+
+const getWeather = async (input) => {
+    const location = resolveCity(input);
+    if (!location) return {message: 'Unsupported city', supportedCities: cities.map(city => city.name)};
+    const city = location.name;
     if (!WEATHER_URL || !WEATHER_AUTH) return {message: "OUT OF SERVICE"}
     try {
       const cache = await redisGet(city);
@@ -12,9 +16,13 @@ const getWeather = async (city) => {
         return (JSON.parse(cache));
       }
       console.log("CACHE MISS")
+      const weatherUrl = new URL(WEATHER_URL);
+      for (const key of ['city', 'state', 'country', 'zip']) weatherUrl.searchParams.delete(key);
+      weatherUrl.searchParams.set('lat', location.lat);
+      weatherUrl.searchParams.set('lon', location.lon);
       const response = await axios.request({
         method: "GET",
-        url: WEATHER_URL + city,
+        url: weatherUrl.toString(),
         headers: {
             "X-API-KEY": WEATHER_AUTH
         }
@@ -27,7 +35,7 @@ const getWeather = async (city) => {
       await redisSet(city, JSON.stringify(weather_data));
       return weather_data;
     } catch (error) {
-        console.error(error)
+        console.error('Weather request failed:', error.code || error.message)
       return {message: "Error in API call"};
     }
   };
