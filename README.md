@@ -132,8 +132,7 @@ Examples: `/api/v1/weather/TEHRAN`, `/api/v1/weather/esfahan`,
 
 ### Fault tolerance demo
 
-See [the demo runbook](deployment/demo/README.md) and
-[implementation and measured results](IMPROVES-REPORT.md). The production base
+See [the demo runbook](deployment/demo/README.md). The production base
 keeps fault controls disabled. Use the isolated demo overlay for controlled faults.
 
 Weather responses include `source` (`provider` or `cache`), `stale`, and

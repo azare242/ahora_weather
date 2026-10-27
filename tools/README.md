@@ -111,5 +111,5 @@ kubectl -n weather-demo get deploy,pods,pdb
 See the [demo runbook](../deployment/demo/README.md) for restoring individual
 fault flags and mock-provider mode. The scripts preserve PVCs and do not drain
 or stop nodes. Worker-failure and cross-worker placement experiments require a
-separate multi-worker setup. The [implementation report](../IMPROVES-REPORT.md)
-contains the recorded results and their limitations.
+separate multi-worker setup. Inspect `test-results/` for locally recorded
+measurements and cluster snapshots.
