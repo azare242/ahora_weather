@@ -41,8 +41,9 @@ test('requests use coordinates, share alias cache, and reject unknown cities loc
         const {getWeather} = require('../weather');
         assert.equal((await getWeather('London')).message, 'Unsupported city');
         assert.equal(calls, 0);
-        assert.deepEqual(await getWeather(' ESFAHAN '), {min: 10, max: 20});
-        assert.deepEqual(await getWeather('اصفهان'), {min: 10, max: 20});
+        const first = await getWeather(' ESFAHAN ');
+        assert.equal(first.min, 10); assert.equal(first.source, 'provider');
+        assert.equal((await getWeather('اصفهان')).source, 'cache');
         assert.equal(calls, 1);
         assert.ok(cache.has('isfahan'));
     } finally {

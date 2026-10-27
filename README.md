@@ -11,62 +11,52 @@ npm start
 ```
 
 `npm run dev` starts the application with nodemon. Configure the environment
-variables listed below before requesting weather data. Redis is required for
+variables listed below before requesting weather data. Redis is optional for
 weather requests; `GET /ping` can be used to check the server without it.
 
  - Implemented with ExpressJs
  - You can access docker image of project with `azare242/weather-server:latest`
  - for weather i use [ninjas](https://api-ninjas.com/)  api
 
-Run Docker Compose v2 or newer from the repository root. In your zsh setup,
-prefix every Docker command below with `withproxy` to use the proxy defined
-in `~/.zshrc`:
+Run Docker Compose v2 or newer from the repository root:
 
 ```sh
 cp deployment/.env.example deployment/.env
 # Set WEATHER_AUTH in deployment/.env to your API Ninjas key.
-withproxy docker build --network=host \
-  --build-arg HTTP_PROXY --build-arg HTTPS_PROXY \
-  --build-arg http_proxy --build-arg https_proxy \
-  -t ahora-weather:local weather_server
-withproxy docker compose -f deployment/docker-compose.yml up --no-build -d --wait
+docker build -t ahora-weather:local weather_server
+docker compose -f deployment/docker-compose.yml up --no-build -d --wait
 curl http://localhost:9999/ping
 curl http://localhost:9999/api/v1/weather/tehran
 ```
 
-The build command uses host networking so the build can reach your localhost
-proxy on Linux; proxy values are passed as build arguments, not saved as image
-environment variables. Without this local proxy setup, `docker compose up
---build -d --wait` builds normally. Compose waits for Redis to become healthy. The app
+The app starts independently of Redis and
 runs as a non-root user with production dependencies, a read-only filesystem,
-and a `/ping` health check. Redis is available only inside the Compose network;
+and a `/livez` health check. Redis is available only inside the Compose network;
 its data is stored in a named volume with append-only persistence enabled.
 The app binds to localhost on port 9999; change `APP_PORT` in `deployment/.env`
 if that port is occupied. Weather requests require a valid API key and provider
 access. `/ping` only checks the HTTP server, not Redis or the weather provider.
 
 ```sh
-withproxy docker compose -f deployment/docker-compose.yml logs -f app
-withproxy docker compose -f deployment/docker-compose.yml down
+docker compose -f deployment/docker-compose.yml logs -f app
+docker compose -f deployment/docker-compose.yml down
 ```
 
 `down` preserves Redis data. Add `--volumes` only when you intend to delete it.
 To build and run just the app image against an existing Redis server:
 
 ```sh
-withproxy docker build --network=host \
-  --build-arg HTTP_PROXY --build-arg HTTPS_PROXY \
-  --build-arg http_proxy --build-arg https_proxy \
-  -t ahora-weather:local weather_server
-withproxy docker run --rm --init -p 127.0.0.1:9999:9999 --env-file deployment/.env \
+docker build -t ahora-weather:local weather_server
+docker run --rm --init -p 127.0.0.1:9999:9999 --env-file deployment/.env \
   -e REDIS_HOST=your-redis-host -e REDIS_PORT=6379 ahora-weather:local
 ```
 
 ### Kubernetes baseline
 
-Build the current app as `ahora-weather:local` using the Docker command above.
-For kind, load it with `kind load docker-image ahora-weather:local`; for minikube,
-use `minikube image load ahora-weather:local`. For a remote cluster, push the
+Build the current app as `ahora-weather:resilience-v1` using the Docker command above
+with its image tag changed accordingly.
+For kind, load it with `kind load docker-image ahora-weather:resilience-v1`; for minikube,
+use `minikube image load ahora-weather:resilience-v1`. For a remote cluster, push the
 image with a unique version tag or digest and update `server-deployment.yml`.
 The local tag uses `IfNotPresent`; rebuilds under the same tag require reloading
 and restarting Pods. Use unique tags for repeatable rollouts.
@@ -98,10 +88,10 @@ Non-secret settings live in `deployment/k8s/server-configmap.yml` and are
 injected as environment variables. After changing the ConfigMap or Secret,
 restart the app with `kubectl -n weather rollout restart deployment/weather-server-deployment`.
 The Service routes port 80 to the app's named port on 9999.
-Startup, readiness, and liveness probes currently use `/ping`, which checks
-only the HTTP process; weather requests can still fail when Redis or the
-provider is unavailable. Dedicated health semantics and graceful shutdown
-remain application improvements in `improve.md`.
+Startup and liveness probes use `/livez`; readiness uses `/readyz`. Redis and
+provider outages do not remove every replica from Service traffic. SIGTERM marks
+the instance unready, waits five seconds for routing propagation, then drains
+HTTP requests within a 25-second deadline.
 
 Both workloads have resource budgets, non-root users, read-only root filesystems,
 dropped capabilities, and no mounted Kubernetes API token. Size resources using
@@ -139,3 +129,24 @@ Unknown cities return HTTP 400 with the supported city names.
 
 Examples: `/api/v1/weather/TEHRAN`, `/api/v1/weather/esfahan`,
 `/api/v1/weather/bandar-abbas` (URL-encode Persian names or spaces).
+
+### Fault tolerance demo
+
+See [the demo runbook](deployment/demo/README.md) and
+[implementation and measured results](IMPROVES-REPORT.md). The production base
+keeps fault controls disabled. Use the isolated demo overlay for controlled faults.
+
+Weather responses include `source` (`provider` or `cache`), `stale`, and
+`observedAt`; `X-Pod-Name` identifies the serving instance. Unsupported cities
+return 400; requests with no usable provider or retained cache return 503.
+A failed cache read bypasses Redis, and a failed write preserves provider success.
+The default provider deadline is 1500 ms; cache operations are bounded at 300 ms.
+After three provider failures per process, a circuit opens for 10 seconds, then
+allows one recovery probe. Fresh cache lasts 20 seconds; retained stale data may
+be served for up to 300 seconds from fetch time. Redis must remain reachable for
+stale fallback; there is no local cache or Redis high availability.
+`observedAt` records application fetch time, not a provider observation timestamp.
+Settings are listed in `weather_server/config.js` and the base ConfigMap.
+The PDB requires two available app replicas for voluntary evictions; direct Pod
+deletion and node crashes bypass this protection. Placement prefers host spread
+but permits replacement on surviving nodes. Use three workers to demonstrate it.

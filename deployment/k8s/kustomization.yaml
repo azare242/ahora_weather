@@ -7,3 +7,4 @@ resources:
   - redis-pvc.yml
   - redis-deployment.yml
   - redis-service.yml
+  - server-pdb.yml

@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: weather-demo
+resources:
+  - ../k8s
+  - namespace.yml
+  - mock.yml
+secretGenerator:
+  - name: weather-server-secret
+    literals:
+      - WEATHER_AUTH=demo-only
+patches:
+  - target:
+      kind: ConfigMap
+      name: my-configmap
+    patch: |-
+      - op: replace
+        path: /data/WEATHER_URL
+        value: http://mock-provider:8080/weather
+      - op: replace
+        path: /data/DEMO_FAULTS
+        value: "true"
+      - op: replace
+        path: /data/REDIS_PAIR_TTL
+        value: "3"

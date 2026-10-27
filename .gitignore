@@ -1,0 +1,6 @@
+# Generated cluster measurements and test output (kept locally).
+/test-results/
+
+# Python experiment runner caches.
+__pycache__/
+*.py[cod]

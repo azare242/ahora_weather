@@ -21,6 +21,14 @@ spec:
       labels:
         app: weather-server
     spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: weather-server
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -31,12 +39,16 @@ spec:
       containers:
         - name: weather-server
           # Build/load this image locally, or replace with a published immutable tag/digest.
-          image: ahora-weather:local
+          image: ahora-weather:resilience-v1
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: my-configmap
           env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: WEATHER_AUTH
               valueFrom:
                 secretKeyRef:
@@ -59,20 +71,21 @@ spec:
               drop: [ALL]
           startupProbe:
             httpGet:
-              path: /ping
+              path: /livez
               port: http
             periodSeconds: 2
             timeoutSeconds: 2
             failureThreshold: 30
           readinessProbe:
+            failureThreshold: 1
             httpGet:
-              path: /ping
+              path: /readyz
               port: http
             periodSeconds: 5
             timeoutSeconds: 2
           livenessProbe:
             httpGet:
-              path: /ping
+              path: /livez
               port: http
             periodSeconds: 10
             timeoutSeconds: 2

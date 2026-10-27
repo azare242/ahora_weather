@@ -1,32 +1,33 @@
-const {REDIS_HOST, REDIS_PORT, REDIS_PAIR_TTL} = require("./config")
-const {createClient} = require("redis");
-const redis_url = `redis://${REDIS_HOST}:${REDIS_PORT}`
-
-const redisSet = async (key, value) => {
-
-    
-    const redis_client = await createClient({
-        url: redis_url
-    })
-    .on("error", (error)=>console.log(error))
-    .connect();
-    
-    await redis_client.set(key, value,{EX: REDIS_PAIR_TTL});
-};
-
-
-const redisGet = async (key) => {
-    const redis_client = await createClient({url: redis_url})
-    .on("error", (error)=>console.log(error))
-    .connect();
-
-    const result = await redis_client.get(key);
-    return result;
+const {createClient} = require('redis');
+const config = require('./config');
+const client = createClient({
+    url: `redis://${config.REDIS_HOST}:${config.REDIS_PORT}`,
+    disableOfflineQueue: true,
+    socket: {connectTimeout: config.CACHE_TIMEOUT_MS, reconnectStrategy: false},
+});
+client.on('error', () => {});
+let connecting;
+async function command(operation) {
+    let timer;
+    try {
+        return await Promise.race([
+            (async () => {
+                if (!client.isOpen) {
+                    if (!connecting) connecting = client.connect().finally(() => { connecting = undefined; });
+                    await connecting;
+                }
+                if (!client.isReady) throw new Error('Cache unavailable');
+                return operation();
+            })(),
+            new Promise((_, reject) => { timer = setTimeout(() => {
+                if (client.isOpen) client.destroy();
+                reject(new Error('Cache deadline exceeded'));
+            }, config.CACHE_TIMEOUT_MS); }),
+        ]);
+    } finally { clearTimeout(timer); }
 }
-
-
-
 module.exports = {
-    redisSet,
-    redisGet,
-}
+    redisGet: key => command(() => client.get(key)),
+    redisSet: (key, value) => command(() => client.set(key, value, {EX: config.CACHE_MAX_AGE})),
+    close: () => { if (client.isOpen) client.destroy(); },
+};

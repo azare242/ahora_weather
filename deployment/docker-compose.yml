@@ -7,9 +7,6 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${APP_PORT:-9999}:9999"
-    depends_on:
-      redis:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: "9999"

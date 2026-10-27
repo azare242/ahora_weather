@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-provider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-provider
+  template:
+    metadata:
+      labels:
+        app: mock-provider
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mock
+          image: ahora-weather:resilience-v1
+          imagePullPolicy: IfNotPresent
+          command: [node, mock-provider.js]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          readinessProbe:
+            httpGet: {path: /livez, port: 8080}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-provider
+spec:
+  selector:
+    app: mock-provider
+  ports:
+    - port: 8080
+      targetPort: 8080
